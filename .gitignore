@@ -1,8 +1,5 @@
 # Customized
-*.pth
-*.pt
 keys.txt
-results/
 .vscode/
 
 # Byte-compiled / optimized / DLL files
