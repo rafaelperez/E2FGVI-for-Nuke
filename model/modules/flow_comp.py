@@ -100,17 +100,17 @@ class SPyNet(nn.Module):
         # generate downsampled frames
         for level in range(5):
             ref.append(
-                F.avg_pool2d(input=ref[-1],
+                F.avg_pool2d(ref[-1],
                              kernel_size=2,
                              stride=2,
                              count_include_pad=False))
             supp.append(
-                F.avg_pool2d(input=supp[-1],
+                F.avg_pool2d(supp[-1],
                              kernel_size=2,
                              stride=2,
                              count_include_pad=False))
-        ref = ref[::-1]
-        supp = supp[::-1]
+        ref.reverse()
+        supp.reverse()
 
         # flow computation
         flow = ref[0].new_zeros(n, 2, h // 32, w // 32)
@@ -118,18 +118,26 @@ class SPyNet(nn.Module):
             if level == 0:
                 flow_up = flow
             else:
-                flow_up = F.interpolate(input=flow,
-                                        scale_factor=2,
+                flow_up = F.interpolate(flow,
+                                        scale_factor=2.0,
                                         mode='bilinear',
                                         align_corners=True) * 2.0
 
             # add the residue to the upsampled flow
-            flow = flow_up + self.basic_module[level](torch.cat([
-                ref[level],
-                flow_warp(supp[level],
-                          flow_up.permute(0, 2, 3, 1).contiguous(),
-                          padding_mode='border'), flow_up
-            ], 1))
+            f_warp = flow_warp(supp[level], flow_up.permute(0, 2, 3, 1).contiguous(), padding_mode='border')
+            if level == 0:
+                flow = self.basic_module[0](torch.cat([ref[level], f_warp, flow_up], 1))
+            elif level == 1:
+                flow = self.basic_module[1](torch.cat([ref[level], f_warp, flow_up], 1))
+            elif level == 2:
+                flow = self.basic_module[2](torch.cat([ref[level], f_warp, flow_up], 1))
+            elif level == 3:
+                flow = self.basic_module[3](torch.cat([ref[level], f_warp, flow_up], 1))
+            elif level == 4:
+                flow = self.basic_module[4](torch.cat([ref[level], f_warp, flow_up], 1))
+            else: # level == 5
+                flow = self.basic_module[5](torch.cat([ref[level], f_warp, flow_up], 1))
+            flow = flow_up + flow
 
         return flow
 
@@ -147,17 +155,17 @@ class SPyNet(nn.Module):
         h, w = ref.shape[2:4]
         w_up = w if (w % 32) == 0 else 32 * (w // 32 + 1)
         h_up = h if (h % 32) == 0 else 32 * (h // 32 + 1)
-        ref = F.interpolate(input=ref,
+        ref = F.interpolate(ref,
                             size=(h_up, w_up),
                             mode='bilinear',
                             align_corners=False)
-        supp = F.interpolate(input=supp,
+        supp = F.interpolate(supp,
                              size=(h_up, w_up),
                              mode='bilinear',
                              align_corners=False)
 
         # compute flow, and resize back to the original resolution
-        flow = F.interpolate(input=self.compute_flow(ref, supp),
+        flow = F.interpolate(self.compute_flow(ref, supp),
                              size=(h, w),
                              mode='bilinear',
                              align_corners=False)
@@ -344,9 +352,9 @@ def flow_to_image(flow_uv, clip_flow=None, convert_to_bgr=False):
 
 def flow_warp(x,
               flow,
-              interpolation='bilinear',
-              padding_mode='zeros',
-              align_corners=True):
+              interpolation: str='bilinear',
+              padding_mode: str='zeros',
+              align_corners: bool=True):
     """Warp an image or a feature map with optical flow.
     Args:
         x (Tensor): Tensor with size (n, c, h, w).
@@ -368,7 +376,6 @@ def flow_warp(x,
     # create mesh grid
     grid_y, grid_x = torch.meshgrid(torch.arange(0, h), torch.arange(0, w))
     grid = torch.stack((grid_x, grid_y), 2).type_as(x)  # (w, h, 2)
-    grid.requires_grad = False
 
     grid_flow = grid + flow
     # scale grid_flow to [-1,1]

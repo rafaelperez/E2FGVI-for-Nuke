@@ -94,19 +94,48 @@ class Encoder(nn.Module):
         ])
 
     def forward(self, x):
-        bt, c, _, _ = x.size()
-        # h, w = h//4, w//4
+        bt, _, _, _ = x.size()
+
         out = x
-        for i, layer in enumerate(self.layers):
-            if i == 8:
-                x0 = out
-                _, _, h, w = x0.size()
-            if i > 8 and i % 2 == 0:
-                g = self.group[(i - 8) // 2]
-                x = x0.view(bt, g, -1, h, w)
-                o = out.view(bt, g, -1, h, w)
-                out = torch.cat([x, o], 2).view(bt, -1, h, w)
-            out = layer(out)
+
+        out = self.layers[0](out)
+        out = self.layers[1](out)
+        out = self.layers[2](out)
+        out = self.layers[3](out)
+        out = self.layers[4](out)
+        out = self.layers[5](out)
+        out = self.layers[6](out)
+        out = self.layers[7](out)
+
+        x0 = out
+        _, _, h, w = x0.size()
+        out = self.layers[8](out)
+        out = self.layers[9](out)
+
+        x = x0.view(bt, 2, -1, h, w)
+        o = out.view(bt, 2, -1, h, w)
+        out = torch.cat([x, o], 2).view(bt, -1, h, w)
+        out = self.layers[10](out)
+        out = self.layers[11](out)
+
+        x = x0.view(bt, 4, -1, h, w)
+        o = out.view(bt, 4, -1, h, w)
+        out = torch.cat([x, o], 2).view(bt, -1, h, w)
+        out = self.layers[12](out)
+        out = self.layers[13](out)
+
+        x = x0.view(bt, 8, -1, h, w)
+        o = out.view(bt, 8, -1, h, w)
+        out = torch.cat([x, o], 2).view(bt, -1, h, w)
+        out = self.layers[14](out)
+        out = self.layers[15](out)
+
+        x = x0.view(bt, 1, -1, h, w)
+        o = out.view(bt, 1, -1, h, w)
+        out = torch.cat([x, o], 2).view(bt, -1, h, w)
+        out = self.layers[16](out)
+        out = self.layers[17](out)
+
         return out
 
 
@@ -125,7 +154,7 @@ class deconv(nn.Module):
 
     def forward(self, x):
         x = F.interpolate(x,
-                          scale_factor=2,
+                          scale_factor=2.0,
                           mode='bilinear',
                           align_corners=True)
         return self.conv(x)
@@ -194,7 +223,7 @@ class InpaintGenerator(BaseNetwork):
                                               n_vecs=n_vecs,
                                               t2t_params=t2t_params,
                                               pool_method=pool_method))
-        self.transformer = nn.Sequential(*blocks)
+        self.transformer = nn.ModuleList(blocks)
 
         if init_weights:
             self.init_weights()
@@ -232,7 +261,7 @@ class InpaintGenerator(BaseNetwork):
 
         return pred_flows_forward, pred_flows_backward
 
-    def forward(self, masked_frames, num_local_frames):
+    def forward(self, masked_frames, num_local_frames: int):
         l_t = num_local_frames
         b, t, ori_c, ori_h, ori_w = masked_frames.size()
 
@@ -252,8 +281,9 @@ class InpaintGenerator(BaseNetwork):
 
         # content hallucination through stacking multiple temporal focal transformer blocks
         trans_feat = self.ss(enc_feat.view(-1, c, h, w), b, fold_output_size)
-        trans_feat = self.transformer([trans_feat, fold_output_size])
-        trans_feat = self.sc(trans_feat[0], t, fold_output_size)
+        for block in self.transformer:
+            trans_feat, fold_output_size = block((trans_feat, fold_output_size))
+        trans_feat = self.sc(trans_feat, t, fold_output_size)
         trans_feat = trans_feat.view(b, t, -1, h, w)
         enc_feat = enc_feat + trans_feat
 

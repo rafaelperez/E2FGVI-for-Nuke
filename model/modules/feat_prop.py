@@ -3,6 +3,7 @@
 """
 import torch
 import torch.nn as nn
+import torchvision
 
 from mmcv.ops import ModulatedDeformConv2d, modulated_deform_conv2d
 from mmcv.cnn import constant_init
@@ -52,10 +53,16 @@ class SecondOrderDeformableAlignment(ModulatedDeformConv2d):
         # mask
         mask = torch.sigmoid(mask)
 
-        return modulated_deform_conv2d(x, offset, mask, self.weight, self.bias,
-                                       self.stride, self.padding,
-                                       self.dilation, self.groups,
-                                       self.deform_groups)
+        return torchvision.ops.deform_conv2d(
+            x,
+            offset,
+            self.weight,
+            self.bias, 
+            self.stride,
+            self.padding,
+            self.dilation,
+            mask,
+            )
 
 
 class BidirectionalPropagation(nn.Module):
@@ -85,21 +92,21 @@ class BidirectionalPropagation(nn.Module):
         """
         b, t, c, h, w = x.shape
         feats = {}
-        feats['spatial'] = [x[:, i, :, :, :] for i in range(0, t)]
+        feats = {'spatial': [x[:, i, :, :, :] for i in range(t)]}
 
-        for module_name in ['backward_', 'forward_']:
+        for module_name, module in self.deform_align.items():
 
             feats[module_name] = []
 
-            frame_idx = range(0, t)
-            flow_idx = range(-1, t - 1)
+            flow_idx = list(range(-1, t - 1))
             mapping_idx = list(range(0, len(feats['spatial'])))
             mapping_idx += mapping_idx[::-1]
 
             if 'backward' in module_name:
-                frame_idx = frame_idx[::-1]
+                frame_idx = list(range(t-1, -1, -1))
                 flows = flows_backward
             else:
+                frame_idx = list(range(0, t))
                 flows = flows_forward
 
             feat_prop = x.new_zeros(b, self.channel, h, w)
@@ -124,25 +131,33 @@ class BidirectionalPropagation(nn.Module):
 
                     cond = torch.cat([cond_n1, feat_current, cond_n2], dim=1)
                     feat_prop = torch.cat([feat_prop, feat_n2], dim=1)
-                    feat_prop = self.deform_align[module_name](feat_prop, cond,
+                    feat_prop = module(feat_prop, cond,
                                                                flow_n1,
                                                                flow_n2)
 
-                feat = [feat_current] + [
-                    feats[k][idx]
-                    for k in feats if k not in ['spatial', module_name]
-                ] + [feat_prop]
+                feat = []
+                feat.append(feat_current)
+                for k in feats:
+                    if k not in ['spatial', module_name]:
+                        feat.append(feats[k][idx])
+                feat.append(feat_prop)
 
                 feat = torch.cat(feat, dim=1)
-                feat_prop = feat_prop + self.backbone[module_name](feat)
+                if module_name == 'backward_':
+                    feat_prop = feat_prop + self.backbone["backward_"](feat)
+                else:
+                    feat_prop = feat_prop + self.backbone["forward_"](feat)
                 feats[module_name].append(feat_prop)
 
             if 'backward' in module_name:
-                feats[module_name] = feats[module_name][::-1]
+                feats[module_name].reverse()
 
         outputs = []
         for i in range(0, t):
-            align_feats = [feats[k].pop(0) for k in feats if k != 'spatial']
+            align_feats = []
+            for k in feats:
+                if k != 'spatial':
+                    align_feats.append(feats[k].pop(0))
             align_feats = torch.cat(align_feats, dim=1)
             outputs.append(self.fusion(align_feats))
 
