@@ -1,0 +1,385 @@
+Root {
+ inputs 0
+ project_directory "\[python \{nuke.script_directory()\}]"
+ frame 11
+ last_frame 69
+ lock_range true
+ format "2048 1556 0 0 2048 1556 1 2K_Super_35(full-ap)"
+ proxy_type scale
+ proxy_format "1024 778 0 0 1024 778 1 1K_Super_35(full-ap)"
+ colorManagement Nuke
+ workingSpaceLUT linear
+ monitorLut sRGB
+ monitorOutLUT rec709
+ int8Lut sRGB
+ int16Lut sRGB
+ logLut Cineon
+ floatLut linear
+}
+Read {
+ inputs 0
+ file_type mov
+ file ../results/tennis_results.mp4
+ format "432 240 0 0 432 240 1 "
+ before black
+ last 70
+ after black
+ frame_mode offset
+ frame 1
+ origlast 70
+ origset true
+ name Read5
+ xpos 70
+ ypos -159
+}
+Read {
+ inputs 0
+ file_type png
+ file ../examples/tennis_mask/#####.png
+ format "432 240 0 0 432 240 1 "
+ first 0
+ before black
+ last 69
+ after black
+ origfirst 0
+ origlast 69
+ origset true
+ name Read3
+ xpos 180
+ ypos -1023
+}
+Dilate {
+ size 3
+ name Dilate1
+ xpos 180
+ ypos -808
+}
+Read {
+ inputs 0
+ file_type png
+ file ../examples/tennis/#####.png
+ format "432 240 0 0 432 240 1 "
+ first 0
+ before black
+ last 69
+ after black
+ origfirst 0
+ origlast 69
+ origset true
+ name Read2
+ xpos 70
+ ypos -1023
+}
+OCIOColorSpace {
+ in_colorspace scene_linear
+ out_colorspace Gamma2.4
+ name OCIOColorSpace1
+ xpos 70
+ ypos -874
+}
+Grade {
+ white 2
+ add -1
+ black_clamp false
+ name Grade4
+ xpos 70
+ ypos -802
+}
+Grade {
+ inputs 1+1
+ white 0
+ maskChannelMask rgba.red
+ name Grade1
+ xpos 70
+ ypos -730
+}
+FrameRange {
+ last_frame 14
+ time ""
+ name FrameRange1
+ xpos 70
+ ypos -682
+}
+ContactSheet {
+ width {{width*columns}}
+ height {{height}}
+ rows 1
+ columns {{endframe-startframe}}
+ splitinputs true
+ startframe {{parent.FrameRange1.knob.first_frame}}
+ endframe {{parent.FrameRange1.knob.last_frame}}
+ name ContactSheet1
+ selected true
+ xpos 70
+ ypos -634
+}
+Inference {
+ modelFile ./Cattery/E2FGVI/E2FGVI.cat
+ serialiseKnob {n_frames:{ContactSheet1.endframe-ContactSheet1.startframe};neighbor:11;}
+ name Inference1
+ xpos 70
+ ypos -586
+}
+Grade {
+ white 2
+ add -1
+ reverse true
+ black_clamp false
+ enable_mix_luminance false
+ name Grade2
+ xpos 77
+ ypos -537
+}
+OCIOColorSpace {
+ in_colorspace Gamma2.4
+ out_colorspace scene_linear
+ name OCIOColorSpace2
+ xpos 70
+ ypos -490
+}
+Crop {
+ box {{"(frame*432) - 432" x9 61432} 0 {frame*432} 240}
+ reformat true
+ crop false
+ name Crop8
+ xpos 70
+ ypos -442
+}
+TimeOffset {
+ time_offset {{parent.FrameRange1.knob.first_frame-1}}
+ time ""
+ name TimeOffset1
+ xpos 70
+ ypos -394
+}
+TimeClip {
+ time ""
+ first {{FrameRange1.knob.first_frame}}
+ last {{FrameRange1.knob.last_frame-1}}
+ origfirst {{first}}
+ origlast {{last}}
+ origset true
+ mask_metadata true
+ name TimeClip2
+ xpos 70
+ ypos -322
+}
+Write {
+ in_colorspace scene_linear
+ out_colorspace scene_linear
+ ocioColorspace scene_linear
+ display default
+ view sRGB
+ name Write1
+ xpos 70
+ ypos -250
+}
+Read {
+ inputs 0
+ file_type png
+ file ../examples/bmx-trees_mask/#####.png
+ format "432 240 0 0 432 240 1 "
+ first 0
+ before black
+ last 79
+ after black
+ origfirst 0
+ origlast 79
+ origset true
+ name Read6
+ xpos 400
+ ypos -1023
+}
+Dilate {
+ size 3
+ name Dilate2
+ xpos 400
+ ypos -808
+}
+Read {
+ inputs 0
+ file_type jpeg
+ file ../examples/bmx-trees/#####.jpg
+ format "432 240 0 0 432 240 1 "
+ first 0
+ before black
+ last 79
+ after black
+ origfirst 0
+ origlast 79
+ origset true
+ name Read1
+ xpos 290
+ ypos -1023
+}
+Text2 {
+ font_size_toolbar 24
+ font_width_toolbar 100
+ font_height_toolbar 100
+ message "\[frame]"
+ old_message {{49 49}
+   }
+ old_expression_markers {{0 1}
+   }
+ box {0 0 {width} {height}}
+ xjustify center
+ yjustify bottom
+ transforms {{0 2}
+   }
+ font_size_values {{0 24 1 24}
+   }
+ cursor_position 7
+ font_size 24
+ scale {1 1}
+ cursor_initialised true
+ autofit_bbox false
+ initial_cursor_position {{0 240}
+   }
+ group_animations {{0} imported: 0 selected: items: "root transform/"}
+ animation_layers {{1 11 216 120 0 0 1 1 0 0 0 0}
+   }
+ enable_background true
+ background_opacity 0.8
+ background_border_x {{width/16}}
+ name Text1
+ xpos 290
+ ypos -922
+}
+OCIOColorSpace {
+ in_colorspace scene_linear
+ out_colorspace Gamma2.4
+ name OCIOColorSpace3
+ xpos 290
+ ypos -874
+}
+Grade {
+ white 2
+ add -1
+ black_clamp false
+ name Grade5
+ xpos 290
+ ypos -778
+}
+Grade {
+ inputs 1+1
+ white 0
+ maskChannelMask rgba.red
+ name Grade3
+ xpos 290
+ ypos -730
+}
+FrameRange {
+ first_frame 10
+ last_frame 22
+ time ""
+ name FrameRange2
+ xpos 290
+ ypos -682
+}
+ContactSheet {
+ width {{width*columns}}
+ height {{height}}
+ rows 1
+ columns {{endframe-startframe}}
+ splitinputs true
+ startframe {{parent.FrameRange2.knob.first_frame}}
+ endframe {{parent.FrameRange2.knob.last_frame}}
+ name ContactSheet2
+ xpos 290
+ ypos -634
+}
+Inference {
+ modelFile ./Cattery/E2FGVI/E2FGVI.cat
+ serialiseKnob {}
+ name Inference2
+ xpos 290
+ ypos -586
+}
+Grade {
+ white 2
+ add -1
+ reverse true
+ black_clamp false
+ enable_mix_luminance false
+ name Grade6
+ xpos 290
+ ypos -538
+}
+OCIOColorSpace {
+ in_colorspace Gamma2.4
+ out_colorspace scene_linear
+ name OCIOColorSpace4
+ xpos 290
+ ypos -490
+}
+Crop {
+ box {{"(frame*432) - 432" x9 61432} 0 {frame*432} 240}
+ reformat true
+ crop false
+ name Crop1
+ xpos 290
+ ypos -442
+}
+TimeOffset {
+ time_offset {{parent.FrameRange2.knob.first_frame-1}}
+ time ""
+ name TimeOffset2
+ xpos 290
+ ypos -394
+}
+TimeClip {
+ time ""
+ first {{FrameRange2.knob.first_frame}}
+ last {{FrameRange2.knob.last_frame-1}}
+ origfirst {{first}}
+ origlast {{last}}
+ origset true
+ mask_metadata true
+ name TimeClip1
+ xpos 290
+ ypos -322
+}
+Write {
+ in_colorspace scene_linear
+ out_colorspace scene_linear
+ ocioColorspace scene_linear
+ display default
+ view sRGB
+ name Write2
+ xpos 290
+ ypos -250
+}
+Read {
+ inputs 0
+ file_type mov
+ file ../results/bmx-trees_results.mp4
+ format "432 240 0 0 432 240 1 "
+ before black
+ last 80
+ after black
+ frame_mode offset
+ frame 1
+ origlast 80
+ origset true
+ name Read4
+ xpos 290
+ ypos -159
+}
+CatFileCreator {
+ inputs 0
+ torchScriptFile ./Cattery/E2FGVI/E2FGVI.pt
+ catFile ./Cattery/E2FGVI/E2FGVI2.cat
+ channelsIn rgba.red,rgba.green,rgba.blue
+ channelsOut rgba.red,rgba.green,rgba.blue
+ modelId E2FGVI
+ name CatFileCreator_E2FGVI
+ tile_color 0x1f00ffff
+ xpos -150
+ ypos -682
+ postage_stamp false
+ addUserKnob {20 User}
+ addUserKnob {3 n_frames}
+ n_frames 12
+ addUserKnob {3 neighbor}
+ neighbor 6
+}
