@@ -1,4 +1,3 @@
-}
 Root {
  inputs 0
  project_directory "\[python \{nuke.script_directory()\}]"
