@@ -4,9 +4,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch
 
-from mmcv.cnn import ConvModule
-from mmcv.runner import load_checkpoint
-
 
 class FlowCompletionLoss(nn.Module):
     """Flow completion loss"""
@@ -53,26 +50,12 @@ class SPyNet(nn.Module):
         2. no batch normalization is used in this version.
     Paper:
         Optical Flow Estimation using a Spatial Pyramid Network, CVPR, 2017
-    Args:
-        pretrained (str): path for pre-trained SPyNet. Default: None.
     """
-    def __init__(
-        self,
-        use_pretrain=True,
-        pretrained='https://download.openmmlab.com/mmediting/restorers/basicvsr/spynet_20210409-c6c1bd09.pth'
-    ):
+    def __init__(self):
         super().__init__()
 
         self.basic_module = nn.ModuleList(
             [SPyNetBasicModule() for _ in range(6)])
-
-        if use_pretrain:
-            if isinstance(pretrained, str):
-                print("load pretrained SPyNet...")
-                load_checkpoint(self, pretrained, strict=True)
-            elif pretrained is not None:
-                raise TypeError('[pretrained] should be str or None, '
-                                f'but got {type(pretrained)}.')
 
         self.register_buffer(
             'mean',
@@ -186,41 +169,36 @@ class SPyNetBasicModule(nn.Module):
         super().__init__()
 
         self.basic_module = nn.Sequential(
-            ConvModule(in_channels=8,
-                       out_channels=32,
-                       kernel_size=7,
-                       stride=1,
-                       padding=3,
-                       norm_cfg=None,
-                       act_cfg=dict(type='ReLU')),
-            ConvModule(in_channels=32,
-                       out_channels=64,
-                       kernel_size=7,
-                       stride=1,
-                       padding=3,
-                       norm_cfg=None,
-                       act_cfg=dict(type='ReLU')),
-            ConvModule(in_channels=64,
-                       out_channels=32,
-                       kernel_size=7,
-                       stride=1,
-                       padding=3,
-                       norm_cfg=None,
-                       act_cfg=dict(type='ReLU')),
-            ConvModule(in_channels=32,
-                       out_channels=16,
-                       kernel_size=7,
-                       stride=1,
-                       padding=3,
-                       norm_cfg=None,
-                       act_cfg=dict(type='ReLU')),
-            ConvModule(in_channels=16,
-                       out_channels=2,
-                       kernel_size=7,
-                       stride=1,
-                       padding=3,
-                       norm_cfg=None,
-                       act_cfg=None))
+            nn.Conv2d(in_channels=8,
+                      out_channels=32,
+                      kernel_size=7,
+                      stride=1,
+                      padding=3),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels=32,
+                      out_channels=64,
+                      kernel_size=7,
+                      stride=1,
+                      padding=3),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels=64,
+                      out_channels=32,
+                      kernel_size=7,
+                      stride=1,
+                      padding=3),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels=32,
+                      out_channels=16,
+                      kernel_size=7,
+                      stride=1,
+                      padding=3),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels=16,
+                      out_channels=2,
+                      kernel_size=7,
+                      stride=1,
+                      padding=3)
+            )
 
     def forward(self, tensor_input):
         """
